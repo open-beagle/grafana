@@ -1,0 +1,53 @@
+ARG BASE
+
+FROM ${BASE}
+
+ARG AUTHOR
+ARG VERSION
+
+LABEL maintainer=${AUTHOR} version=${VERSION}
+
+ARG TARGETOS
+ARG TARGETARCH
+
+ARG GF_UID="472"
+ARG GF_GID="472"
+
+ENV PATH="/usr/share/grafana/bin:$PATH" \
+    GF_PATHS_CONFIG="/etc/grafana/grafana.ini" \
+    GF_PATHS_DATA="/var/lib/grafana" \
+    GF_PATHS_HOME="/usr/share/grafana" \
+    GF_PATHS_LOGS="/var/log/grafana" \
+    GF_PATHS_PLUGINS="/var/lib/grafana/plugins" \
+    GF_PATHS_PROVISIONING="/etc/grafana/provisioning"
+
+WORKDIR $GF_PATHS_HOME
+
+COPY conf conf
+
+# curl should be part of the image
+RUN apt-get update && apt-get install -y ca-certificates curl
+
+RUN mkdir -p "$GF_PATHS_HOME/.aws" && \
+  addgroup --system --gid $GF_GID grafana && \
+  adduser --uid $GF_UID --system --ingroup grafana grafana && \
+  mkdir -p "$GF_PATHS_PROVISIONING/datasources" \
+             "$GF_PATHS_PROVISIONING/dashboards" \
+             "$GF_PATHS_PROVISIONING/notifiers" \
+             "$GF_PATHS_LOGS" \
+             "$GF_PATHS_PLUGINS" \
+             "$GF_PATHS_DATA" && \
+    cp conf/sample.ini "$GF_PATHS_CONFIG" && \
+    cp conf/ldap.toml /etc/grafana/ldap.toml && \
+    chown -R grafana:grafana "$GF_PATHS_DATA" "$GF_PATHS_HOME/.aws" "$GF_PATHS_LOGS" "$GF_PATHS_PLUGINS" "$GF_PATHS_PROVISIONING" && \
+    chmod -R 777 "$GF_PATHS_DATA" "$GF_PATHS_HOME/.aws" "$GF_PATHS_LOGS" "$GF_PATHS_PLUGINS" "$GF_PATHS_PROVISIONING"
+
+COPY ./bin/$TARGETOS-$TARGETARCH/grafana-server ./bin/grafana-server
+COPY ./bin/$TARGETOS-$TARGETARCH/grafana-cli ./bin/grafana-cli
+COPY ./public ./public
+COPY ./tools ./tools
+
+COPY packaging/docker/run.sh /
+
+USER grafana
+ENTRYPOINT [ "/run.sh" ]

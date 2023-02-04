@@ -1,0 +1,16 @@
+.awcache
+.dockerignore
+.git
+.gitignore
+.github
+.vscode
+data*
+docker
+Dockerfile
+docs
+dump.rdb
+node_modules
+/local
+/tmp
+*.yml
+*.md
