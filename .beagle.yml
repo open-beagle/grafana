@@ -25,7 +25,6 @@ steps:
         - ./.git
         - ./public/build
         - ./public/views
-        - ./vendor
       endpoint: https://cache.wodcloud.com
       access_key:
         from_secret: ACCESS_KEY_MINIO

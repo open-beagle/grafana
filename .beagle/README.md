@@ -38,7 +38,7 @@ docker run --rm \
   -e PLUGIN_SECRET_KEY=$PLUGIN_SECRET_KEY \
   -e DRONE_REPO_OWNER="open-beagle" \
   -e DRONE_REPO_NAME="grafana" \
-  -e PLUGIN_MOUNT="./.git,./public/build,./public/views,./vendor" \
+  -e PLUGIN_MOUNT="./.git,./public/build,./public/views" \
   -v $(pwd):$(pwd) \
   -w $(pwd) \
   registry.cn-qingdao.aliyuncs.com/wod/devops-s3-cache:1.0
