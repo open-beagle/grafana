@@ -30,61 +30,28 @@ bash .beagle/build.sh
 ## cache
 
 ```bash
-# cache build
-docker run \
---rm \
--v $PWD/:/go/src/github.com/grafana/grafana \
--v $PWD/bin/cache/:/cache \
--w /go/src/github.com/grafana/grafana \
--e PLUGIN_REBUILD=true \
--e PLUGIN_CHECK=yarn.lock \
--e PLUGIN_MOUNT=./node_modules,./packages/grafana-data/node_modules,./packages/grafana-e2e/node_modules,./packages/grafana-e2e-selectors/node_modules,./packages/grafana-runtime/node_modules,./packages/grafana-toolkit/node_modules,./packages/grafana-ui/node_modules,./packages/jaeger-ui-components/node_modules,plugins-bundled/internal/input-datasource/node_modules \
--e DRONE_COMMIT_BRANCH=dev \
--e CI_WORKSPACE=/go/src/github.com/grafana/grafana \
-registry.cn-qingdao.aliyuncs.com/wod/devops-cache:1.0
+# 构建缓存-->推送缓存至服务器
+docker run --rm \
+  -e PLUGIN_REBUILD=true \
+  -e PLUGIN_ENDPOINT=$PLUGIN_ENDPOINT \
+  -e PLUGIN_ACCESS_KEY=$PLUGIN_ACCESS_KEY \
+  -e PLUGIN_SECRET_KEY=$PLUGIN_SECRET_KEY \
+  -e DRONE_REPO_OWNER="open-beagle" \
+  -e DRONE_REPO_NAME="grafana" \
+  -e PLUGIN_MOUNT="./.git,./public/build,./public/views,./vendor" \
+  -v $(pwd):$(pwd) \
+  -w $(pwd) \
+  registry.cn-qingdao.aliyuncs.com/wod/devops-s3-cache:1.0
 
-rm -rf \
-  node_modules \
-  public/build \
-  packages/grafana-data/node_modules \
-  packages/grafana-e2e/node_modules \
-  packages/grafana-e2e-selectors/node_modules \
-  packages/grafana-runtime/node_modules \
-  packages/grafana-toolkit/node_modules \
-  packages/grafana-ui/node_modules \
-  packages/jaeger-ui-components/node_modules \
-  plugins-bundled/internal/input-datasource/node_modules
-
-# cache read
-docker run \
---rm \
--v $PWD/:/go/src/github.com/grafana/grafana \
--v $PWD/bin/cache/:/cache \
--w /go/src/github.com/grafana/grafana \
--e PLUGIN_RESTORE=true \
--e PLUGIN_CHECK=yarn.lock \
--e PLUGIN_MOUNT=./node_modules,./packages/grafana-data/node_modules,./packages/grafana-e2e/node_modules,./packages/grafana-e2e-selectors/node_modules,./packages/grafana-runtime/node_modules,./packages/grafana-toolkit/node_modules,./packages/grafana-ui/node_modules,./packages/jaeger-ui-components/node_modules,plugins-bundled/internal/input-datasource/node_modules \
--e DRONE_COMMIT_BRANCH=dev \
--e CI_WORKSPACE=/go/src/github.com/grafana/grafana \
-registry.cn-qingdao.aliyuncs.com/wod/devops-cache:1.0
-```
-
-## grafana-ui
-
-```bash
-docker run -ti --rm \
--v /usr/local/share/.cache/yarn:/usr/local/share/.cache/yarn \
--v $PWD/:/go/src/github.com/grafana/grafana \
--w /go/src/github.com/grafana/grafana \
-registry.cn-qingdao.aliyuncs.com/wod/node:14.18.1-bullseye \
-bash -c 'yarn && export NODE_ENV=production && yarn build'
-
-docker build \
-  --build-arg BASE=registry.cn-qingdao.aliyuncs.com/wod/alpine:3.12 \
-  --build-arg AUTHOR=mengkzhaoyun@gmail.com \
-  --build-arg VERSION=v9.3.6 \
-  --tag registry.cn-qingdao.aliyuncs.com/wod/grafana-ui:v9.3.6 \
-  --file .beagle/grafana-ui.dockerfile .
-
-docker push registry.cn-qingdao.aliyuncs.com/wod/grafana-ui:v9.3.6
+# 读取缓存-->将缓存从服务器拉取到本地
+docker run --rm \
+  -e PLUGIN_RESTORE=true \
+  -e PLUGIN_ENDPOINT=$PLUGIN_ENDPOINT \
+  -e PLUGIN_ACCESS_KEY=$PLUGIN_ACCESS_KEY \
+  -e PLUGIN_SECRET_KEY=$PLUGIN_SECRET_KEY \
+  -e DRONE_REPO_OWNER="open-beagle" \
+  -e DRONE_REPO_NAME="grafana" \
+  -v $(pwd):$(pwd) \
+  -w $(pwd) \
+  registry.cn-qingdao.aliyuncs.com/wod/devops-s3-cache:1.0
 ```

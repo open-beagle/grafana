@@ -11,64 +11,35 @@ volumes:
       path: /var/run/docker.sock
 
 workspace:
-  path: github.com/grafana/grafana
+  path: /go/src/github.com/grafana/grafana
+
+clone:
+  disable: true
 
 steps:
-  - name: read-cache
-    image: registry.cn-qingdao.aliyuncs.com/wod/devops-cache:1.0
-    volumes:
-      - name: cache
-        path: /cache
+  - name: s3-cache
+    image: registry.cn-qingdao.aliyuncs.com/wod/devops-s3-cache:1.0
     settings:
       restore: true
-      check: yarn.lock
       mount:
-        - ./node_modules
-        - ./packages/grafana-data/node_modules
-        - ./packages/grafana-e2e/node_modules
-        - ./packages/grafana-e2e-selectors/node_modules
-        - ./packages/grafana-runtime/node_modules
-        - ./packages/grafana-toolkit/node_modules
-        - ./packages/grafana-ui/node_modules
-        - ./packages/jaeger-ui-components/node_modules
-        - ./plugins-bundled/internal/input-datasource/node_modules
+        - ./.git
+        - ./public/build
+        - ./public/views
+        - ./vendor
+      endpoint: https://cache.wodcloud.com
+      access_key:
+        from_secret: ACCESS_KEY_MINIO
+      secret_key:
+        from_secret: SECRET_KEY_MINIO
 
-  - name: build-node
-    image: registry.cn-qingdao.aliyuncs.com/wod/node:14.18.1-bullseye
-    volumes:
-      - name: yarn
-        path: /usr/local/share/.cache/yarn
-    commands:
-      - yarn
-      - export NODE_ENV=production
-      - yarn build
-
-  - name: store-cache
-    image: registry.cn-qingdao.aliyuncs.com/wod/devops-cache:1.0
-    volumes:
-      - name: cache
-        path: /cache
+  - name: fetch
+    image: registry.cn-qingdao.aliyuncs.com/wod/devops-git:1.0
     settings:
-      rebuild: true
-      check: yarn.lock
-      mount:
-        - ./node_modules
-        - ./packages/grafana-data/node_modules
-        - ./packages/grafana-e2e/node_modules
-        - ./packages/grafana-e2e-selectors/node_modules
-        - ./packages/grafana-runtime/node_modules
-        - ./packages/grafana-toolkit/node_modules
-        - ./packages/grafana-ui/node_modules
-        - ./packages/jaeger-ui-components/node_modules
-        - ./plugins-bundled/internal/input-datasource/node_modules
+      proxy:
+        from_secret: SOCKS5_PROXY
 
   - name: golang
-    image: registry.cn-qingdao.aliyuncs.com/wod/golang:1.17.3-bullseye
-    volumes:
-      - name: go
-        path: /go/pkg
-    environment:
-      GOPROXY: https://goproxy.cn
+    image: registry.cn-qingdao.aliyuncs.com/wod/golang:1.19
     commands:
       - bash .beagle/build.sh
 
@@ -229,14 +200,35 @@ steps:
 
 ---
 kind: secret
+name: SOCKS5_PROXY
+get:
+  name: SOCKS5_PROXY
+  path: devops-secrets
+
+---
+kind: secret
 name: REGISTRY_USER_ALIYUN
 get:
-  path: devops-registry-aliyun
-  name: USERNAME
+  name: REGISTRY_USER_ALIYUN
+  path: devops-secrets
 
 ---
 kind: secret
 name: REGISTRY_PASSWORD_ALIYUN
 get:
-  path: devops-registry-aliyun
-  name: PASSWORD
+  name: REGISTRY_PASSWORD_ALIYUN
+  path: devops-secrets
+
+---
+kind: secret
+name: ACCESS_KEY_MINIO
+get:
+  name: ACCESS_KEY_MINIO
+  path: devops-secrets
+
+---
+kind: secret
+name: SECRET_KEY_MINIO
+get:
+  name: SECRET_KEY_MINIO
+  path: devops-secrets
